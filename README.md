@@ -38,7 +38,7 @@ The actual recommendations must come from a restaurant provider. Foodie AI must 
 
 ## System architecture
 
-![Local MVP architecture](docs/architecture.png)
+![Local MVP architecture](architecture.png)
 
 **Flow:** iMessage group → macOS Messages / BlueBubbles → Python app → Jev (only when needed) + restaurant lookup + SQLite → filtered/ranked suggestions → iMessage.
 
@@ -52,7 +52,7 @@ The actual recommendations must come from a restaurant provider. Foodie AI must 
 
 ## Entity-relationship design
 
-![Entity relationship diagram](docs/er.png)
+![Entity relationship diagram](er.png)
 
 The major relationships are:
 
@@ -67,7 +67,7 @@ The major relationships are:
 | Group → Personality polls | A group can hold multiple naming/personality votes |
 | Personality poll → Votes | One choice per participating member per poll |
 
-See [docs/data-model.md](docs/data-model.md) for keys, data retention, and a Mermaid ER diagram that renders directly on GitHub.
+See [docs/data-model.md](data-model.md) for keys, data retention, and a Mermaid ER diagram that renders directly on GitHub.
 
 ## Session lifecycle
 
