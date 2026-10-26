@@ -394,6 +394,7 @@ A first-run quickstart must work without credentials:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+pip install --upgrade pip "setuptools>=68" wheel   # Python 3.10's bundled setuptools 58 can't do editable installs
 pip install -e '.[dev]'
 cp .env.example .env
 pytest -q

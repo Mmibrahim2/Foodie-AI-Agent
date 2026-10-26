@@ -11,6 +11,6 @@ You are implementing the project specified in [README.md](README.md). The README
 7. **Maintain code quality.** Typed Python, compact modules, lint/format, `pytest`, mocked network requests; no secrets or raw personal chat messages in repo or logs.
 8. **Update docs and status accurately.** At each milestone run tests and record results in `docs/implementation-log.md`. Keep diagrams/docs consistent. No unsubstantiated latency claims.
 
-Suggested first commands after checking environment: `python3 -m venv .venv && source .venv/bin/activate && pip install -e '.[dev]' && pytest -q && python scripts/demo.py`.
+Suggested first commands after checking environment: `python3 -m venv .venv && source .venv/bin/activate && pip install --upgrade pip "setuptools>=68" wheel && pip install -e '.[dev]' && pytest -q && python scripts/demo.py`.
 
 When blocked by live iMessage or Jev setup, keep the offline deliverable usable and report precisely what the user must configure. Do not fake a successful integration.
