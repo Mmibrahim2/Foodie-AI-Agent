@@ -1,6 +1,6 @@
 # Codex execution instructions — Foodie AI
 
-You are implementing the project specified in [README.md](README.md). The README is the authoritative scope, privacy contract, build order and acceptance test list.
+You are implementing the project specified in [docs/spec.md](docs/spec.md). The spec is the authoritative scope, privacy contract, build order and acceptance test list.
 
 1. **Implement, don't just propose.** Start with a working offline mock demo, tests and typed core; continue into actual adapters while clearly marking hardware/credential-dependent functionality unverified.
 2. **Local-first and free by default.** Do not call paid APIs, enable Jev, send live iMessages, or turn on billable services without explicit user configuration. Use dependency injection and mocks for offline tests.

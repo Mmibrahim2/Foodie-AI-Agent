@@ -1,6 +1,6 @@
 # Foodie AI — Database entities and relationships
 
-This design is for SQLite local MVP; implement migrations and foreign keys. See README for normative privacy, constraints and session version rules.
+This design is for SQLite local MVP; implement migrations and foreign keys. See [spec.md](spec.md) for normative privacy, constraints and session version rules.
 
 ```mermaid
 erDiagram

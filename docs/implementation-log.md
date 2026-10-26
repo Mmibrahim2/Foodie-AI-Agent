@@ -58,7 +58,7 @@ rows become `uncertain` (never resent automatically), and processed event IDs pe
 
 ## Milestones 5-6: places, ranking, conflicts, voting, demo
 
-Filtering order follows the README. Unknown evidence for a hard requirement (halal, hard budget)
+Filtering order follows the spec ([spec.md](spec.md)). Unknown evidence for a hard requirement (halal, hard budget)
 flags the candidate, and all flagged candidates rank below verified ones. Hours parser understands
 common OSM syntax; anything else is "hours not confirmed". Ranking weights 30/20/20/15/15, with
 reviews and price omitted (and weights renormalized) when the provider has no data; unknown hours

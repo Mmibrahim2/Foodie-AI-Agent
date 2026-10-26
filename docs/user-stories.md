@@ -1,6 +1,6 @@
 # Foodie AI — User stories and text-message storyboards
 
-All stories are target behaviors, not existing deployed features. The README has the normative acceptance tests. In the examples, restaurant listings must be populated with real provider data before live use.
+All stories are target behaviors, not existing deployed features. [spec.md](spec.md) has the normative acceptance tests. In the examples, restaurant listings must be populated with real provider data before live use.
 
 ## US-01: Joining and onboarding
 **As** a group organizer, **I want** the assistant to introduce itself once and ask for agreement before participation.
