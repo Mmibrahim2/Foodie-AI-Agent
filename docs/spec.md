@@ -500,7 +500,7 @@ See [docs/user-stories.md](user-stories.md). Codex must implement and test these
 - BlueBubbles REST/webhook guide: https://docs.bluebubbles.app/server/developer-guides/rest-api-and-webhooks
 - Jev docs: https://jevtypesafe.org/docs/api/ and https://typesafe-jev.ai/jev-api/ (verify correct provider before integrating)
 
-**Diagram status:** `diagrams/*.dot` and `diagrams/architecture.py` were updated to match the implemented code (stopped/expired states, outbox, participants, rules/snapshot defaults). The PNGs in `docs/` are the originals: Graphviz isn't installed on the build Mac, so re-render with `brew install graphviz` then `dot -Tpng diagrams/session.dot -o docs/session.png` (same for `er`, `architecture`).
+**Diagram status:** `diagrams/*.dot` and `diagrams/architecture.py` match the implemented code (stopped/expired states, outbox, participants, rules/snapshot defaults), and the PNGs in `docs/` were re-rendered from the `.dot` files on 2026-10-26. To re-render: `dot -Tpng diagrams/session.dot -o docs/session.png` (same for `er`, `architecture`).
 
 **Diagram policy:** Preserve existing PNGs, include editable `diagrams/*.py` source (mingrammer) and Mermaid in docs. Rerender as architecture evolves; diagrams reflect reality, not future features mislabeled as implemented.
 
