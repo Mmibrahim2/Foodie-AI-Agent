@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 import pytest
 import respx
-from conftest import ALEX, CHAT, FIXTURES, Harness
+from conftest import ALEX, CHAT, FIXTURES, MIKE, SAM, Harness
 
 from app.domain.models import GeoPoint
 from app.restaurants.base import (
@@ -189,5 +189,43 @@ async def test_provider_outage_is_reported_not_retried(tmp_path):
 async def test_no_results_never_relaxes_requirements(h):
     await h.onboard()
     await h.send(ALEX, "Chef find kosher bbq near Tempe within 1 mile")
-    assert "won't relax" in h.last or "Not verified: kosher" in h.last
+    assert "won't relax" in h.last or "kosher not verified" in h.last or "any option: kosher" in h.last
     assert "1 mi" in h.last or "1 miles" in h.last
+
+
+async def test_shortlist_is_compact_and_never_shows_zero_miles(h):
+    await h.onboard()
+    await h.send(ALEX, "Chef find us dinner near Tempe, under $25.")
+    await h.send(SAM, "Halal for me.")
+    await h.send(MIKE, "No seafood.")
+    text = h.last
+    assert "0.0 mi" not in text and "<0.1 mi" in text
+    places = len(re.findall(r"^\d\. ", text, re.M))
+    # header + 2 lines per place + at most 3 footer lines
+    assert len(text.splitlines()) <= 1 + 2 * places + 3
+    assert text.count("Distances are straight-line") == 1
+    assert "lists halal" in text
+
+
+async def test_verified_diet_alternative_is_offered_when_cuisine_hides_it(h):
+    await h.onboard()
+    await h.send(ALEX, "Chef find us dinner near Tempe")
+    await h.send(SAM, "Halal for me.")
+    await h.send(MIKE, "Burgers for me")
+    text = h.last
+    assert "4. The Halal Guys" in text and "not burger" in text
+    assert "Option 4 lists halal but isn't the cuisine you asked for." in text
+    session = h.repo.active_session(h.repo.group_by_chat(CHAT)["id"])
+    assert [r["option_number"] for r in h.repo.shortlist(session["id"])] == [1, 2, 3, 4]
+    await h.send(SAM, "Chef vote 4")
+    assert "option 4" in h.last
+
+
+async def test_blocked_cuisine_asks_for_another_choice(h):
+    await h.onboard()
+    await h.send(ALEX, "Chef find dinner near Tempe")
+    await h.send(MIKE, "No seafood.")
+    await h.send(ALEX, "sushi please")
+    await h.send(SAM, "Burgers for me")
+    assert "Sushi is out because someone can't have seafood" in h.last
+    assert "name another cuisine" in h.last

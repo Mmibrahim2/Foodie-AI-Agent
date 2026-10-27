@@ -20,7 +20,7 @@ class FixturePlacesProvider:
 
     def __init__(self, path: str | Path, latency_seconds: float = 0.0) -> None:
         data = json.loads(Path(path).read_text())
-        self.attribution = "Data (c) OpenStreetMap contributors (ODbL), offline snapshot " + data.get("fetched_at", "")
+        self.attribution = "Data (c) OpenStreetMap contributors (ODbL), snapshot " + data.get("fetched_at", "")[:10]
         self._fetched_at = data.get("fetched_at", "")
         self._places = [p for el in data["elements"] if (p := place_from_osm_element(el, self._fetched_at))]
         self.latency_seconds = latency_seconds

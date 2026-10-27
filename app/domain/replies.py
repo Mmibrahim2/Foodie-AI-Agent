@@ -76,32 +76,51 @@ def privacy_text(name: str, jev_enabled: bool) -> str:
 
 
 def _miles(d: float) -> str:
-    return f"{d:.1f} mi straight-line"
+    return "<0.1 mi" if d < 0.1 else f"{d:.1f} mi"
+
+
+def _hours(r: RankedPlace) -> str:
+    if r.open_at_arrival:
+        return r.hours_note.replace(" per OSM hours", "").replace("open at ", "open ")
+    return "hours unknown"
 
 
 def shortlist(name: str, ranked: list[RankedPlace], plan: SearchPlan, attribution: str, notes: list[str]) -> str:
-    lines = ["Best matches I found:" if len(ranked) > 1 else "Best match I found:"]
+    """One line per place plus its map link, then a single short footer.
+
+    Unverified requirements shared by every option are stated once in the footer instead of per place.
+    """
+    common = set.intersection(*(set(r.unverified) for r in ranked)) if ranked else set()
+    wanted = " / ".join(sorted(plan.all_cuisines))
+    lines: list[str] = []
     for i, r in enumerate(ranked, start=1):
         p = r.place
-        bits = [p.name]
+        bits = [p.name, _miles(r.distance_miles)]
         if p.rating is not None and p.review_count:
-            bits.append(f"{p.rating:.1f} stars ({p.review_count} reviews)")
-        bits.append(_miles(r.distance_miles))
+            bits.append(f"{p.rating:.1f} stars ({p.review_count})")
         if p.price_level:
             bits.append("$" * p.price_level)
+        if r.matched_cuisines:
+            bits.append(", ".join(r.matched_cuisines))
+        elif p.amenity == "food_court":
+            bits.append("food court")
+        elif wanted:
+            bits.append(f"not {wanted}")
+        verified = [why.removesuffix(" options listed in OSM") for why in r.reasons if why.endswith(" options listed in OSM")]
+        if verified:
+            bits.append("lists " + ", ".join(verified))
+        bits.append(_hours(r))
+        own = [u for u in r.unverified if u not in common]
+        if own:
+            bits.append(f"{', '.join(own)} not verified")
         lines.append(f"{i}. " + " - ".join(bits))
-        detail = [r.hours_note]
-        if r.reasons:
-            detail.append("Why: " + "; ".join(r.reasons[:2]))
-        lines.append("   " + ". ".join(detail) + ".")
-        if r.unverified:
-            lines.append("   Not verified: " + ", ".join(r.unverified) + " (check with the restaurant).")
         lines.append(f"   Map: {p.maps_url}")
+    if common:
+        lines.append(f"Not verified for any option: {', '.join(sorted(common))}. Check with the restaurant.")
     if plan.allergies:
         lines.append(ALLERGY_CAVEAT)
     lines.extend(notes)
-    lines.append("No ratings or prices in this data source." if all(r.place.rating is None for r in ranked) else "")
-    lines.append(f"Reply \"{name} vote 1\", \"{name} more\", or \"{name} closer\". {attribution}.")
+    lines.append(f"Reply \"{name} vote 1\", \"{name} more\" or \"{name} closer\". Distances are straight-line. {attribution}.")
     return "\n".join(ln for ln in lines if ln)
 
 

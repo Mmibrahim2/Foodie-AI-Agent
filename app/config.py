@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     overpass_url: str = "https://overpass-api.de/api/interpreter"
     nominatim_url: str = "https://nominatim.openstreetmap.org/search"
     osm_user_agent: str = "FoodieAI-local-MVP/0.1"
-    places_timeout_seconds: float = 20.0
+    places_timeout_seconds: float = 45.0  # public Overpass often takes ~30 s
     places_cache_seconds: int = 900
 
     default_city: str = ""

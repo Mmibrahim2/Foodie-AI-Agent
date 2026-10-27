@@ -10,7 +10,7 @@ Python 3.10.1 (the only Python installed; 3.11+ was not forced). Dates are 2026-
 | Offline MVP (FastAPI, SQLite, mocks, sessions, ranking, voting, privacy) | **Done, tested** |
 | Offline end-to-end demo (`scripts/demo.py`) | **Done, runs** |
 | Live Nominatim geocoding adapter | **Verified once live** (Tempe, AZ resolved) |
-| Live Overpass search adapter | **Unit-tested with mocked HTTP; live call not verified** (public server returned 502 "at capacity", then timed out). The same query shape succeeded via curl earlier the same day and produced `tests/fixtures/osm_snapshot.json`. |
+| Live Overpass search adapter | **Verified live once (2026-10-26):** `live_osm_check.py "Tempe, AZ" burger` returned 19 real places within 2 mi. The public server took ~30 s, so the default `PLACES_TIMEOUT_SECONDS` is now 45 (earlier attempts at 20 s returned 502 or timed out). |
 | Jev adapter (both documented schemas) | **Contract-tested with mocked HTTP; no live call** (no credentials, provider not yet confirmed) |
 | BlueBubbles adapter | **Unit-tested with mocked HTTP; no live call** (no bot identity / server on this Mac yet) |
 | iMessage round trip (US-01) | **Blocked**: requires the bot Apple Account + BlueBubbles setup in docs/mac-setup.md |
@@ -96,15 +96,15 @@ python3 -m venv .venv.nosync && ln -s .venv.nosync .venv
 .venv/bin/pip install --upgrade pip "setuptools>=68" wheel
 .venv/bin/pip install -e '.[dev]'
 .venv/bin/ruff check app tests scripts        # All checks passed!
-.venv/bin/pytest -q                           # 120 passed
+.venv/bin/pytest -q                           # 123 passed
 .venv/bin/python scripts/demo.py              # full offline storyboard, 0 network calls
 .venv/bin/python scripts/benchmark.py --sessions 40
-.venv/bin/python scripts/live_osm_check.py "Tempe, AZ" burger   # geocode OK, Overpass 502 / timeout
+.venv/bin/python scripts/live_osm_check.py "Tempe, AZ" burger   # geocode OK; Overpass OK with the 45 s timeout
 .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 5050     # /health, /dev/simulate checked with curl
 ```
 
 Test files: commands (11), privacy (13), onboarding (11), sessions (8), interruptions (10),
-places (16), ranking (15), voting (10), jev (17), webhook (9) = 120 tests (parametrized cases counted).
+places (19), ranking (15), voting (10), jev (17), webhook (9) = 123 tests (parametrized cases counted).
 
 ### Benchmark (offline only; measured 2026-10-26T20:22Z, 40 sessions, 320 messages)
 
@@ -122,11 +122,26 @@ search (worst case for search count). Not representative of public Overpass or i
 Jev requests/session: 0 (rules mode). Stale results discarded: 0 in this run (no interruptions
 scripted; the demo run shows 1). Send failure rate: 0. Cache hit rate: n/a for the snapshot provider.
 
+## Reply polish (2026-10-26)
+
+Changes after reviewing the demo as a group-chat reader:
+
+- Shortlists are one line per place plus its map link, with a single footer. Unverified requirements
+  shared by every option are stated once ("Not verified for any option: budget").
+- Distances under 0.1 mi show as "<0.1 mi" instead of "0.0 mi"; "straight-line" is said once.
+- If every cuisine match has an unverified dietary need, the best nearby place whose OSM listing
+  verifies it is added as a votable extra option (e.g. "4. The Halal Guys - not burger / sushi -
+  lists halal").
+- A cuisine ruled out by someone's hard avoid (sushi vs no seafood) now asks whoever wanted it to
+  name another cuisine.
+- 3 new tests in `tests/test_places.py`; `pytest -q`: 123 passed; `ruff check`: clean.
+
 ## Known limitations
 
-- No live iMessage, Jev or Overpass verification yet (see status table).
+- No live iMessage or Jev verification yet; live Overpass verified once (see status table).
 - OSM has no ratings, reviews or prices; replies say so. Halal/allergy evidence is rarely tagged,
-  so most candidates show "Not verified".
+  so most candidates show "not verified". When a cuisine filter leaves every option with an
+  unverified dietary need, one extra Overpass query (no cuisine filter) looks for a place that lists it.
 - Opening hours: common syntax only; holidays ignored; timezone is one configured zone.
 - Travel time is not computed (straight-line miles only, labeled as such).
 - Custom personality text is stored but replies are deterministic templates; styles only tweak a

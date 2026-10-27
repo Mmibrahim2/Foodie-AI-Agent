@@ -110,8 +110,16 @@ class RecommendationService:
             return
 
         for cuisine, avoid in blocked_cuisines(plan):
-            notes.append(f"{cuisine.title()} conflicts with someone's no-{avoid} requirement, so I kept the requirement.")
+            notes.append(f"{cuisine.title()} is out because someone can't have {avoid}. Whoever wanted {cuisine}, name another cuisine and I'll redo the list.")
         shortlist = select_shortlist(pool, plan)
+        try:
+            alt = await self._diet_alternative(point, plan, arrival, shortlist)
+        except (ProviderError, asyncio.TimeoutError):
+            alt = None  # optional extra; the main shortlist still goes out
+        if alt:
+            shortlist.append(alt)
+            diets = ", ".join(sorted(d.replace("_", "-") for d in plan.dietary))
+            notes.append(f"Option {len(shortlist)} lists {diets} but isn't the cuisine you asked for.")
         if plan.budget_hard is None and plan.budget_soft is not None and all(r.place.price_level is None for r in shortlist):
             notes.append(f"Prices aren't listed, so I can't confirm the ${plan.budget_soft:g} budget.")
         if not shortlist:
@@ -130,6 +138,17 @@ class RecommendationService:
         self.searched.add(session_id)
         text = header + "\n" + replies.shortlist(name, shortlist, plan, o.places.attribution, notes)
         await o.reply(group["chat_guid"], text, session_id, version)
+
+    async def _diet_alternative(self, point: GeoPoint, plan: SearchPlan, arrival, shortlist: list[RankedPlace]) -> RankedPlace | None:
+        """When a cuisine filter leaves every option with an unverified dietary need, offer the best
+        place nearby whose listing does verify it, even if it's a different cuisine."""
+        diets = {d.replace("_", "-") for d in plan.dietary}
+        if not diets or not plan.all_cuisines or not shortlist or not all(diets & set(r.unverified) for r in shortlist):
+            return None
+        anything = dataclasses.replace(plan, cuisines_by_member={m: set() for m in plan.cuisines_by_member}, conflict="none")
+        pool, _ = rank(await self._search(point, plan.radius_miles, set()), anything, arrival)
+        shown = {r.place.provider_place_id for r in shortlist}
+        return next((r for r in pool if not diets & set(r.unverified) and r.place.provider_place_id not in shown), None)
 
     async def _search(self, point: GeoPoint, radius: float, tags: set[str]):
         start = time.perf_counter()
