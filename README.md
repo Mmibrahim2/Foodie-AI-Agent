@@ -8,7 +8,7 @@ Foodie AI helps friends agree on where to eat without opening another app. It lo
 
 | Area | Status |
 |---|---|
-| Backend: FastAPI, SQLite, sessions, onboarding, privacy, ranking, voting | Implemented; 123 automated tests pass |
+| Backend: FastAPI, SQLite, sessions, onboarding, privacy, ranking, voting | Implemented; 131 automated tests pass |
 | Offline demo with no Apple hardware or API keys (`python scripts/demo.py`) | Runs end to end |
 | Live geocoding (Nominatim) | Verified once against the live service |
 | Live restaurant search (Overpass) | Verified once against the live service (19 burger places near Tempe; the public server took ~30 s) |
@@ -60,6 +60,56 @@ The actual recommendations must come from a restaurant provider. Foodie AI must 
 - **SQLite:** group preferences (opt-in), session state, personality votes, restaurant references, and voting.
 
 **Performance approach:** deterministic commands first, call Jev only for ambiguity, query restaurants only when area and constraints are known, fetch extra details only for finalists, deduplicate events, and reject outdated search versions. Measure p50/p95 latency instead of promising a fixed response time.
+
+## Agent design pattern
+
+Foodie AI follows the **custom logic pattern** from Google Cloud's [Choose a design pattern for your agentic AI system](https://docs.cloud.google.com/architecture/choose-design-pattern-agentic-ai-system). Plain code decides what runs next, and it combines several of the guide's simpler patterns. The guide recommends this pattern when a workflow needs branching logic, fine-grained control and a mix of fixed rules with model reasoning.
+
+**Why this pattern fits:**
+
+| What the guide asks | Foodie AI's answer |
+|---|---|
+| Predefined steps, or open-ended? | Predefined: find the area, search, filter, rank, shortlist, vote. The steps never change, only the inputs do. |
+| Does a model need to orchestrate? | No. Who said what and which constraint applies is parsed by rules. The one AI call (Jev) only classifies an unclear message during an active search. |
+| Latency | Interactive group chat, so no multi-call reasoning chains. |
+| Cost | Free by default. Each extra model call per request would cost money. |
+| Human involvement | Yes: group consent, confirming the city, opting in to "remember", and the final vote are human decisions. |
+
+**How the code maps to the guide's patterns:**
+
+| Guide pattern | Where it lives |
+|---|---|
+| Custom logic (coordinator in code) | `app/services/orchestration.py`: admission → route command → update constraints → schedule search. Branches are `if` statements, not model calls. |
+| Sequential | `app/workflow/search.py` `SEARCH_WORKFLOW`: locate → plan → gather → rank → shortlist → reply |
+| Parallel | `gather` runs the cuisine search and the dietary alternative search at the same time, so a slow public map server (about 30 s per query) costs one wait instead of two. |
+| Review and critique | `ReviewLoop("reply")`: `draft_reply` writes the shortlist and `check_reply` rejects any option or field that doesn't match the provider's data, any undisclosed unverified requirement, or a missing allergy warning. It's capped at 2 rounds; an unapproved draft is never sent. |
+| Human in the loop | Consent, the name/style vote, city confirmation, "confirm remember" and restaurant voting all pause until people reply. The bot never relaxes someone's hard requirement on its own. |
+| Single bounded model call | `app/decisions/jev.py`: optional, off by default, redacted input, per-session and daily caps, and no retries. |
+
+```mermaid
+flowchart LR
+    M[Group message] --> A[Admission<br/>allowlist, wake word, dedupe, lock]
+    A --> R{Route<br/>rules first, Jev only if unclear}
+    R -->|command| C[Command handlers<br/>vote, stop, privacy]
+    R -->|requirement| S[Update session<br/>version++]
+    S --> W
+    subgraph W[SEARCH_WORKFLOW - Sequential]
+        L[locate] --> P[plan] --> G
+        subgraph G[gather - Parallel]
+            G1[cuisine search]
+            G2[diet alternative search]
+        end
+        G --> K[rank] --> SL[shortlist] --> RL
+        subgraph RL[reply - Review loop, max 2]
+            D[draft_reply] --> CR[check_reply]
+            CR -->|revise| D
+        end
+    end
+    RL --> O[Outbox<br/>re-checks session version]
+    O --> H[Group votes<br/>human in the loop]
+```
+
+**Patterns the guide describes that don't fit here:** coordinator, hierarchical, swarm and ReAct all use a model to plan or route each request. That would add cost, latency and nondeterminism, and send chat content to an AI service. Foodie AI's privacy contract and free-by-default goal rule all of that out. Those patterns would only make sense if the bot grew open-ended tasks, such as planning a whole night out.
 
 ## Entity-relationship design
 
@@ -161,6 +211,7 @@ Keep the Mac as a replaceable **message gateway**, not the decision engine. Late
 - [OpenStreetMap](https://www.openstreetmap.org/)
 - [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API)
 - [Google Maps URLs](https://developers.google.com/maps/documentation/urls/guide)
+- [Google Cloud: Choose a design pattern for your agentic AI system](https://docs.cloud.google.com/architecture/choose-design-pattern-agentic-ai-system)
 
 ## License
 

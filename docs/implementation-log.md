@@ -96,7 +96,7 @@ python3 -m venv .venv.nosync && ln -s .venv.nosync .venv
 .venv/bin/pip install --upgrade pip "setuptools>=68" wheel
 .venv/bin/pip install -e '.[dev]'
 .venv/bin/ruff check app tests scripts        # All checks passed!
-.venv/bin/pytest -q                           # 123 passed
+.venv/bin/pytest -q                           # 131 passed
 .venv/bin/python scripts/demo.py              # full offline storyboard, 0 network calls
 .venv/bin/python scripts/benchmark.py --sessions 40
 .venv/bin/python scripts/live_osm_check.py "Tempe, AZ" burger   # geocode OK; Overpass OK with the 45 s timeout
@@ -135,6 +135,24 @@ Changes after reviewing the demo as a group-chat reader:
 - A cuisine ruled out by someone's hard avoid (sushi vs no seafood) now asks whoever wanted it to
   name another cuisine.
 - 3 new tests in `tests/test_places.py`; `pytest -q`: 123 passed; `ruff check`: clean.
+
+## Agent design pattern refactor (2026-10-27)
+
+Restructured the search around the custom logic pattern from Google Cloud's agent design pattern
+guide (see README "Agent design pattern"):
+
+- `app/workflow/base.py`: deterministic `Step`, `Sequential`, `Parallel` (optional steps may fail
+  without failing the run), `ReviewLoop` (generator + critic, round cap, `Halt` instead of sending an
+  unapproved draft).
+- `app/workflow/search.py`: `SEARCH_WORKFLOW`. The dietary alternative search now runs in parallel
+  with the cuisine search, and starts whenever both a diet need and a cuisine are set. Live, that
+  is sometimes one extra Overpass query, in exchange for not waiting twice.
+- `check_reply` critic: every option must match a place the provider returned, field for field;
+  unverified requirements must be disclosed; the allergy warning must be present.
+- `RecommendationService` now runs the workflow and handles storage and delivery only.
+- 8 new tests in `tests/test_workflow.py`; `pytest -q`: 131 passed; `ruff check`: clean; demo
+  output unchanged. Offline benchmark (40 sessions): search job p50 52 ms / p95 71 ms vs 44 / 72 ms
+  before on the same machine, which is within run-to-run noise.
 
 ## Known limitations
 
